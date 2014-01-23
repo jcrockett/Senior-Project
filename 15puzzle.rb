@@ -42,7 +42,7 @@ end
 class board
   def initialize(pieces)
     # id = 0 assumed to be a space
-    @pieces = peices
+    @pieces = pieces
   end
   
   def possible_boards
