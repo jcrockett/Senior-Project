@@ -45,13 +45,13 @@ class board
     @pieces = peices
   end
   
-  def posible_boards
+  def possible_boards
     # things around the space can move
     # so make a move for each way something can enter the space.
   end
 
   def is_goal(goal)
-    # return bool (true/false
+    # return bool (true/false)
   end
 
 end
