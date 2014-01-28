@@ -28,7 +28,7 @@ class Piece
   end
 
   def draw
-    @image.draw(@x, @y, 0, 0.75, 0.75)
+    @image.draw(@x, @y, 0, 0.7, 0.7)
   end
 end
 
@@ -38,15 +38,20 @@ class PuzzleWindow < Gosu::Window
     super(1280, 960, false)
     self.caption = "Jenni_Puzzle"
     @normal_pics = Gosu::Image.load_tiles(self, "normal face/normal.jpg", -4, -4, true)
+	@perfect_pics = Gosu::Image.load_tiles(self, "perfect face/smaller_perfect.jpg", -4, -4, true)
 	@normal_positions = []
+	@perfect_positions = []
 	for i in 0..3
 		for j in 0..3
-			@normal_positions << [(25 + (j * 163)), (25 + (i * 163))]
+			@normal_positions << [(15 + (j * 155)), (25 + (i * 155))]
+			@perfect_positions << [(650 + (j * 155)), (25 + (i * 155))]
 		end
 	end
-    @tiles = []
+    @normal_tiles = []
+	@perfect_tiles = []
 	for i in 0..14
-		@tiles << Piece.new(self, @normal_pics[i], @normal_positions[i][0], @normal_positions[i][1])
+		@normal_tiles << Piece.new(self, @normal_pics[i], @normal_positions[i][0], @normal_positions[i][1])
+		@perfect_tiles << Piece.new(self, @perfect_pics[i], @perfect_positions[i][0], @perfect_positions[i][1])
 	end
   end
 
@@ -56,7 +61,8 @@ class PuzzleWindow < Gosu::Window
 
   def draw
     for i in 0..14
-      @tiles[i].draw
+      @normal_tiles[i].draw
+	  @perfect_tiles[i].draw
     end
   end
 
