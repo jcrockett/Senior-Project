@@ -23,11 +23,12 @@ class Piece
 		@y += 155
 	end
 
-	def is_clicked?
-		if button_down? Gosu::MsLeft and mouse_x >= @x and mouse_x < @x + 155 and mouse_y >= @y and mouse_y = @y + 155
-			true
-		else
-			false
+	def get_x
+		@x
+	end
+
+	def get_y
+		@y
 	end
 
 	def draw
@@ -55,28 +56,41 @@ class PuzzleWindow < Gosu::Window
 		end
 		@normal_tiles = []
 		@perfect_tiles = []
-		for i in 1..15
+		for i in 0..15
 			@normal_tiles << Piece.new(self, @normal_pics[i], @normal_positions[i][0], @normal_positions[i][1])
 			@perfect_tiles << Piece.new(self, @perfect_pics[i], @perfect_positions[i][0], @perfect_positions[i][1])
 		end
+		puts @normal_tiles
 	end
 
 	def needs_cursor?
     	true
 	end
-	
-	def move_piece
-	end
 
 	def update
-		if @normal_tiles[0].is_clicked?
-			@normal_tiles[0].left
+		for i in 1..15
+			if button_down? Gosu::MsLeft and mouse_x > @normal_tiles[i].get_x and mouse_x < @normal_tiles[i].get_x + 155 and mouse_y > @normal_tiles[i].get_y and mouse_y < @normal_tiles[i].get_y + 155
+				if @normal_tiles[i].get_x == @normal_tiles[0].get_x + 155 and @normal_tiles[i].get_y == @normal_tiles[0].get_y
+					@normal_tiles[i].left
+					@normal_tiles[0].right
+				elsif @normal_tiles[i].get_x == @normal_tiles[0].get_x - 155 and @normal_tiles[i].get_y == @normal_tiles[0].get_y
+					@normal_tiles[i].right
+					@normal_tiles[0].left
+				elsif @normal_tiles[i].get_x == @normal_tiles[0].get_x and @normal_tiles[i].get_y == @normal_tiles[0].get_y + 155
+					@normal_tiles[i].down
+					@normal_tiles[0].up
+				elsif @normal_tiles[i].get_x == @normal_tiles[0].get_x and @normal_tiles[i].get_y == @normal_tiles[0].get_y - 155
+					@normal_tiles[i].up
+					@normal_tiles[0].down
+				else
+				end
+			end
 		end
 	end
 
 	def draw
 		@background.draw(0, 0, 0)
-		for i in 0..14
+		for i in 1..15
 			@normal_tiles[i].draw
 			@perfect_tiles[i].draw
 		end
