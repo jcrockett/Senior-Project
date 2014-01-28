@@ -2,6 +2,7 @@ require 'gosu'
 
 class Piece
 	def initialize(window, image, x, y)
+		@window = window
 		@image = image
 		@x = x
 		@y = y
@@ -29,6 +30,10 @@ class Piece
 
 	def get_y
 		@y
+	end
+	
+	def is_clicked?
+		@window.button_down? Gosu::MsLeft and @window.mouse_x > @x and @window.mouse_x < @x + 155 and @window.mouse_y > @y and @window.mouse_y < @y + 155
 	end
 
 	def draw
@@ -67,23 +72,33 @@ class PuzzleWindow < Gosu::Window
     	true
 	end
 
+	def scramble
+	end
+
+	def solve
+	end
+
+	def move_tile(id)
+		if @normal_tiles[id].get_x == @normal_tiles[0].get_x + 155 and @normal_tiles[id].get_y == @normal_tiles[0].get_y
+			@normal_tiles[id].left
+			@normal_tiles[0].right
+		elsif @normal_tiles[id].get_x == @normal_tiles[0].get_x - 155 and @normal_tiles[id].get_y == @normal_tiles[0].get_y
+			@normal_tiles[id].right
+			@normal_tiles[0].left
+		elsif @normal_tiles[id].get_x == @normal_tiles[0].get_x and @normal_tiles[id].get_y == @normal_tiles[0].get_y + 155
+			@normal_tiles[id].down
+			@normal_tiles[0].up
+		elsif @normal_tiles[id].get_x == @normal_tiles[0].get_x and @normal_tiles[id].get_y == @normal_tiles[0].get_y - 155
+			@normal_tiles[id].up
+			@normal_tiles[0].down
+		else
+		end
+	end
+
 	def update
 		for i in 1..15
-			if button_down? Gosu::MsLeft and mouse_x > @normal_tiles[i].get_x and mouse_x < @normal_tiles[i].get_x + 155 and mouse_y > @normal_tiles[i].get_y and mouse_y < @normal_tiles[i].get_y + 155
-				if @normal_tiles[i].get_x == @normal_tiles[0].get_x + 155 and @normal_tiles[i].get_y == @normal_tiles[0].get_y
-					@normal_tiles[i].left
-					@normal_tiles[0].right
-				elsif @normal_tiles[i].get_x == @normal_tiles[0].get_x - 155 and @normal_tiles[i].get_y == @normal_tiles[0].get_y
-					@normal_tiles[i].right
-					@normal_tiles[0].left
-				elsif @normal_tiles[i].get_x == @normal_tiles[0].get_x and @normal_tiles[i].get_y == @normal_tiles[0].get_y + 155
-					@normal_tiles[i].down
-					@normal_tiles[0].up
-				elsif @normal_tiles[i].get_x == @normal_tiles[0].get_x and @normal_tiles[i].get_y == @normal_tiles[0].get_y - 155
-					@normal_tiles[i].up
-					@normal_tiles[0].down
-				else
-				end
+			if @normal_tiles[i].is_clicked?
+				move_tile(i)
 			end
 		end
 	end
