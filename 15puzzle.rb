@@ -60,6 +60,15 @@ class Puzzle
 	end
 
 	def scramble
+		temp_puzzle = []
+		temp_positions = @positions
+		while temp_positions[3] != @positions[0]
+			temp_positions = temp_positions.shuffle
+		end
+		for i in 0..15
+			temp_puzzle << Piece.new(self, @tiles[i], temp_positions[i][0], temp_positions[i][1])
+		end
+		@puzzle = temp_puzzle
 	end
 
 	def move_tiles
@@ -110,11 +119,16 @@ class PuzzleWindow < Gosu::Window
 	def needs_cursor?
     	true
 	end
+	
+	def scramble
+		if button_down? Gosu::MsLeft and mouse_x > 110 and mouse_x < 265 and mouse_y > 645 and mouse_y < 695
+			@normal.scramble
+		end
+	end
 
 	def update
-		for i in 1..15
-			@normal.move_tiles
-		end
+		scramble
+		@normal.move_tiles
 	end
 
 	def draw
