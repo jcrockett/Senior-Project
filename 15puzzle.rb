@@ -54,12 +54,38 @@ class Puzzle
 			end
 		end
 		@puzzle = []
+		@solution = []
 		for i in 0..15
 			@puzzle << Piece.new(self, @tiles[i], @positions[i][0], @positions[i][1])
+			@solution << Piece.new(self, @tiles[i], @positions[i][0], @positions[i][1])
 		end
 	end
 
-	def scramble
+	def is_solvable?
+		count = 0
+		indices = []
+		for i in 0..15
+			for j in 0..15
+				if(@puzzle[i].get_x == @solution[j].get_x and @puzzle[i].get_y == @solution[j].get_y)
+					indices << j
+				end
+			end
+		end
+		for i in 0..15
+			for j in i..15
+				if(indices[j] > indices[i])
+					count = count + 1
+				end
+			end
+		end
+		if(count%2 != 0)
+			true
+		else
+			false
+		end
+	end
+
+	def mix
 		temp_puzzle = []
 		temp_positions = @positions
 		while temp_positions[3] != @positions[0]
@@ -69,6 +95,13 @@ class Puzzle
 			temp_puzzle << Piece.new(self, @tiles[i], temp_positions[i][0], temp_positions[i][1])
 		end
 		@puzzle = temp_puzzle
+	end
+
+	def scramble
+		mix
+		while(!is_solvable?)
+			mix
+		end
 	end
 
 	def move_tiles
