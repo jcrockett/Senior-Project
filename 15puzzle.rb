@@ -24,6 +24,40 @@ class Piece
 		@y += 155
 	end
 
+	def move(dir, blank)
+		if(dir == "l")
+			left
+			blank.right
+		elsif(dir == "r")
+			right
+			blank.left
+		elsif(dir == "d")
+			down
+			blank.up
+		elsif(dir == "u")
+			up
+			blank.down
+		else
+			"what the what"
+		end
+	end
+	
+	def above?(blank)
+		@x == blank.get_x and @y == blank.get_y + 155
+	end
+
+	def below?(blank)
+		@x == blank.get_x and @y == blank.get_y - 155
+	end
+
+	def left_of?(blank)
+		@x == blank.get_x - 155 and @y == blank.get_y
+	end
+
+	def right_of?(blank)
+		@x == blank.get_x + 155 and @y == blank.get_y
+	end
+
 	def get_x
 		@x
 	end
@@ -57,7 +91,6 @@ class Puzzle
 		@solution = []
 		for i in 0..15
 			@puzzle << Piece.new(self, @tiles[i], @positions[i][0], @positions[i][1])
-			@solution << Piece.new(self, @tiles[i], @positions[i][0], @positions[i][1])
 		end
 	end
 
@@ -71,13 +104,17 @@ class Puzzle
 				end
 			end
 		end
+		puts indices
 		for i in 0..15
-			for j in i..15
-				if(indices[j] > indices[i])
-					count = count + 1
+			if(i != 3)
+				for j in i..15
+					if(indices[j] > indices[i] and j != 3)
+						count = count + 1
+					end
 				end
 			end
 		end
+		puts count
 		if(count%2 != 0)
 			true
 		else
@@ -103,24 +140,57 @@ class Puzzle
 			mix
 		end
 	end
+		
+
+	def legit_shuffle
+		moves = []
+		for i in 0..15
+			direction = find_direction(i)
+			if direction != "no"
+				moves << [direction, i]
+			end
+		end
+		puts moves.inspect
+		puts " "
+		move = moves.shuffle[0]
+		puts move.inspect
+		puts " "
+		@puzzle[move[1]].move(move[0], @puzzle[3])
+		@solution << move
+	end
+
+	def find_direction(id)
+		if @puzzle[id].right_of?(@puzzle[3])
+			"l"
+		elsif @puzzle[id].left_of?(@puzzle[3])
+			"r"
+		elsif @puzzle[id].above?(@puzzle[3])
+			"d"
+		elsif @puzzle[id].below?(@puzzle[3])
+			"u"
+		else
+			"no"
+		end
+	end
 
 	def move_tiles
 		for i in 0..15
 			if @puzzle[i].is_clicked?(@window)
-				if @puzzle[i].get_x == @puzzle[3].get_x + 155 and @puzzle[i].get_y == @puzzle[3].get_y
+				if find_direction(i) == "l"
 					@puzzle[i].left
 					@puzzle[3].right
-				elsif @puzzle[i].get_x == @puzzle[3].get_x - 155 and @puzzle[i].get_y == @puzzle[3].get_y
+				elsif find_direction(i) == "r"
 					@puzzle[i].right
 					@puzzle[3].left
-				elsif @puzzle[i].get_x == @puzzle[3].get_x and @puzzle[i].get_y == @puzzle[3].get_y + 155
+				elsif find_direction(i) == "d"
 					@puzzle[i].down
 					@puzzle[3].up
-				elsif @puzzle[i].get_x == @puzzle[3].get_x and @puzzle[i].get_y == @puzzle[3].get_y - 155
+				elsif find_direction(i) == "u"
 					@puzzle[i].up
 					@puzzle[3].down
 				else
 				end
+
 			end
 		end
 	end
@@ -137,6 +207,31 @@ class Puzzle
 	end
 end
 
+class TwoPuzzle
+	def initialize(window, normal, perfect)
+		@window = window
+		@normal = normal
+		@perfect = perfect
+	end
+
+	def scramble
+		puts "like your mom did"
+		@normal.legit_shuffle
+	end
+	
+	def move_tiles
+		@normal.move_tiles
+	end
+
+	def solve
+	end
+	
+	def draw
+		@normal.draw
+		@perfect.draw
+	end
+end
+
 
 class PuzzleWindow < Gosu::Window
 	def initialize
@@ -145,8 +240,9 @@ class PuzzleWindow < Gosu::Window
 		@background = Gosu::Image.new(self, "background.jpg", true)
 		@scramble_button = Gosu::Image.new(self, "buttons/scramble.tiff", true)
 		@solve_button = Gosu::Image.new(self, "buttons/solve.tiff", true)
-		@normal = Puzzle.new(self, "normal face/normal.jpg", 15)
+		@normal = Puzzle.new(self, "Thing.png", 15)
 		@perfect = Puzzle.new(self, "perfect face/smaller_perfect.jpg", 650)
+		@puzzle = TwoPuzzle.new(self, @normal, @perfect)
 	end
 
 	def needs_cursor?
@@ -155,19 +251,18 @@ class PuzzleWindow < Gosu::Window
 	
 	def scramble
 		if button_down? Gosu::MsLeft and mouse_x > 110 and mouse_x < 265 and mouse_y > 645 and mouse_y < 695
-			@normal.scramble
+			@puzzle.scramble
 		end
 	end
 
 	def update
 		scramble
-		@normal.move_tiles
+		@puzzle.move_tiles
 	end
 
 	def draw
 		@background.draw(0, 0, 0)
-		@normal.draw
-		@perfect.draw
+		@puzzle.draw
 		@scramble_button.draw(100, 645, 0)
 		@solve_button.draw(350, 645, 0)
 	end
