@@ -123,51 +123,45 @@ class Puzzle
 		end
 	end
 
+	def solve_step(dir, i)
+		if(dir == "r")
+			@puzzle[i].left
+			@puzzle[3].right
+		elsif(dir == "l")
+			@puzzle[i].right
+			@puzzle[3].left
+		elsif(dir == "d")
+			@puzzle[i].up
+			@puzzle[3].down
+		elsif(dir == "u")
+			@puzzle[i].down
+			@puzzle[3].up
+		else
+			puts "error"
+		end
+	end
+
 	def move_tiles
 		for i in 0..15
 			if @puzzle[i].is_clicked?(@window)
 				if find_direction(i) == "l"
 					@puzzle[i].left
 					@puzzle[3].right
+					solution << ["l", i]
 				elsif find_direction(i) == "r"
 					@puzzle[i].right
 					@puzzle[3].left
+					solution << ["r", i]
 				elsif find_direction(i) == "d"
 					@puzzle[i].down
 					@puzzle[3].up
+					solution << ["d", i]
 				elsif find_direction(i) == "u"
 					@puzzle[i].up
 					@puzzle[3].down
+					solution << ["u", i]
 				else
 				end
-
-			end
-		end
-	end
-
-	def solve_step(dir)
-		for i in 0..15
-			if(dir == "l")
-				if(@puzzle[i].left_of?(@puzzle[3]))
-					@puzzle[i].right
-					@puzzle[i].left
-				end
-			elsif(dir == "r")
-				if(@puzzle[i].right_of?(@puzzle[3]))
-					@puzzle[i].left
-					@puzzle[i].right
-				end
-			elsif(dir == "u")
-				if(@puzzle[i].above?(@puzzle[3]))
-					@puzzle[i].down
-					@puzzle[i].up
-				end
-			elsif(dir == "d")
-				if(@puzzle[i].below?(@puzzle[3]))
-					@puzzle[i].up
-					@puzzle[i].down
-				end
-			else
 			end
 		end
 	end
@@ -209,47 +203,16 @@ class TwoPuzzle
 		@normal.move_tiles
 	end
 
-	def solve_step(dir)
-		if(dir == "r")
-			for i in 0..15
-				if(@normal.puzzle[i].right_of?(@normal.puzzle[3]))
-					@normal.puzzle[i].left
-					@normal.puzzle[3].right
-				end
-			end
-		elsif(dir == "l")
-			for i in 0..15
-				if(@normal.puzzle[i].left_of?(@normal.puzzle[3]))
-					@normal.puzzle[i].right
-					@normal.puzzle[3].left
-				end
-			end
-		elsif(dir == "u")
-			for i in 0..15
-				if(@normal.puzzle[i].below?(@normal.puzzle[3]))
-					@normal.puzzle[i].up
-					@normal.puzzle[3].down
-				end
-			end
-		elsif(dir == "d")
-			for i in 0..15
-				if(@normal.puzzle[i].above?(@normal.puzzle[3]))
-					@normal.puzzle[i].down
-					@normal.puzzle[3].up
-				end
-			end
-		else
-		end
-	end
+
 
 	def solve
-		count = @normal.solution.length - 1
-		puts @normal.solution[@normal.solution.length-1][0]
-		while(count >= 0)
-			puts count
-			solve_step(@normal.solution[count][0])
-			@normal.solution.delete_at(count)
-			count = count - 1
+		while @normal.solution.length > 0
+			move = @normal.solution.pop()
+			pmove = move.map { |c| c == "l" ? "r" : c }
+			pmove.map! { |c| c == "r" ? "l" : c }
+			puts @normal.solution.last.inspect
+			@normal.solve_step(move[0], move[1])
+			@perfect.solve_step(move[0], move[1])
 		end
 	end
 	
