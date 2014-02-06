@@ -76,6 +76,7 @@ class Piece
 end
 
 class Puzzle
+	attr_reader :puzzle, :solution
 	def initialize(window, image, location)
 		@window = window
 		@image = image
@@ -92,57 +93,10 @@ class Puzzle
 		for i in 0..15
 			@puzzle << Piece.new(self, @tiles[i], @positions[i][0], @positions[i][1])
 		end
+		@blank_goal = @puzzle[0]
 	end
 
-	def is_solvable?
-		count = 0
-		indices = []
-		for i in 0..15
-			for j in 0..15
-				if(@puzzle[i].get_x == @solution[j].get_x and @puzzle[i].get_y == @solution[j].get_y)
-					indices << j
-				end
-			end
-		end
-		puts indices
-		for i in 0..15
-			if(i != 3)
-				for j in i..15
-					if(indices[j] > indices[i] and j != 3)
-						count = count + 1
-					end
-				end
-			end
-		end
-		puts count
-		if(count%2 != 0)
-			true
-		else
-			false
-		end
-	end
-
-	def mix
-		temp_puzzle = []
-		temp_positions = @positions
-		while temp_positions[3] != @positions[0]
-			temp_positions = temp_positions.shuffle
-		end
-		for i in 0..15
-			temp_puzzle << Piece.new(self, @tiles[i], temp_positions[i][0], temp_positions[i][1])
-		end
-		@puzzle = temp_puzzle
-	end
-
-	def scramble
-		mix
-		while(!is_solvable?)
-			mix
-		end
-	end
-		
-
-	def legit_shuffle
+	def random_move
 		moves = []
 		for i in 0..15
 			direction = find_direction(i)
@@ -150,11 +104,7 @@ class Puzzle
 				moves << [direction, i]
 			end
 		end
-		puts moves.inspect
-		puts " "
 		move = moves.shuffle[0]
-		puts move.inspect
-		puts " "
 		@puzzle[move[1]].move(move[0], @puzzle[3])
 		@solution << move
 	end
@@ -195,7 +145,39 @@ class Puzzle
 		end
 	end
 
-	def solve
+	def solve_step(dir)
+		for i in 0..15
+			if(dir == "l")
+				if(@puzzle[i].left_of?(@puzzle[3]))
+					@puzzle[i].right
+					@puzzle[i].left
+				end
+			elsif(dir == "r")
+				if(@puzzle[i].right_of?(@puzzle[3]))
+					@puzzle[i].left
+					@puzzle[i].right
+				end
+			elsif(dir == "u")
+				if(@puzzle[i].above?(@puzzle[3]))
+					@puzzle[i].down
+					@puzzle[i].up
+				end
+			elsif(dir == "d")
+				if(@puzzle[i].below?(@puzzle[3]))
+					@puzzle[i].up
+					@puzzle[i].down
+				end
+			else
+			end
+		end
+	end
+
+	def get_blank
+		@puzzle[3]
+	end
+
+	def get_blank_goal
+		@blank_goal
 	end
 
 	def draw
@@ -215,15 +197,60 @@ class TwoPuzzle
 	end
 
 	def scramble
-		puts "like your mom did"
-		@normal.legit_shuffle
+		for i in 0..100
+			@normal.random_move
+		end
+		if(@normal.get_blank.get_x != 15 or @normal.get_blank.get_y != 25)
+			scramble
+		end
 	end
 	
 	def move_tiles
 		@normal.move_tiles
 	end
 
+	def solve_step(dir)
+		if(dir == "r")
+			for i in 0..15
+				if(@normal.puzzle[i].right_of?(@normal.puzzle[3]))
+					@normal.puzzle[i].left
+					@normal.puzzle[3].right
+				end
+			end
+		elsif(dir == "l")
+			for i in 0..15
+				if(@normal.puzzle[i].left_of?(@normal.puzzle[3]))
+					@normal.puzzle[i].right
+					@normal.puzzle[3].left
+				end
+			end
+		elsif(dir == "u")
+			for i in 0..15
+				if(@normal.puzzle[i].below?(@normal.puzzle[3]))
+					@normal.puzzle[i].up
+					@normal.puzzle[3].down
+				end
+			end
+		elsif(dir == "d")
+			for i in 0..15
+				if(@normal.puzzle[i].above?(@normal.puzzle[3]))
+					@normal.puzzle[i].down
+					@normal.puzzle[3].up
+				end
+			end
+		else
+		end
+	end
+
 	def solve
+		count = @normal.solution.length - 1
+		puts @normal.solution[@normal.solution.length-1][0]
+		while(count >= 0)
+			puts count
+			solve_step(@normal.solution[count][0])
+			@normal.solution.delete_at(count)
+			count = count - 1
+		end
 	end
 	
 	def draw
@@ -240,7 +267,7 @@ class PuzzleWindow < Gosu::Window
 		@background = Gosu::Image.new(self, "background.jpg", true)
 		@scramble_button = Gosu::Image.new(self, "buttons/scramble.tiff", true)
 		@solve_button = Gosu::Image.new(self, "buttons/solve.tiff", true)
-		@normal = Puzzle.new(self, "Thing.png", 15)
+		@normal = Puzzle.new(self, "normal face/normal.jpg", 15)
 		@perfect = Puzzle.new(self, "perfect face/smaller_perfect.jpg", 650)
 		@puzzle = TwoPuzzle.new(self, @normal, @perfect)
 	end
@@ -255,8 +282,15 @@ class PuzzleWindow < Gosu::Window
 		end
 	end
 
+	def solve
+		if button_down? Gosu::MsLeft and mouse_x > 360 and mouse_x < 515 and mouse_y > 645 and mouse_y < 695
+			@puzzle.solve
+		end
+	end
+
 	def update
 		scramble
+		solve
 		@puzzle.move_tiles
 	end
 
