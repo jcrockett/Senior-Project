@@ -203,16 +203,28 @@ class TwoPuzzle
 		@normal.move_tiles
 	end
 
-
-
 	def solve
+		perfect_positions = []
+		for i in 0..15
+			for j in 0..15
+				if((@normal.puzzle[i].get_x - 15) == (1115 - @perfect.puzzle[j].get_x) and @normal.puzzle[i].get_y == @perfect.puzzle[j].get_y)
+					perfect_positions << j
+				end
+			end
+		end
 		while @normal.solution.length > 0
 			move = @normal.solution.pop()
-			pmove = move.map { |c| c == "l" ? "r" : c }
-			pmove.map! { |c| c == "r" ? "l" : c }
+			#pmove = move.map { |c| c == "l" ? "r" : c }
+			#pmove.map! { |c| c == "r" ? "l" : c }
 			puts @normal.solution.last.inspect
 			@normal.solve_step(move[0], move[1])
-			@perfect.solve_step(move[0], move[1])
+			if(move[0] == "r")
+				@perfect.solve_step("l", perfect_positions[move[1]])
+			elsif(move[0] == "l")
+				@perfect.solve_step("r", perfect_positions[move[1]])
+			else
+				@perfect.solve_step(move[0], perfect_positions[move[1]])
+			end
 		end
 	end
 	
@@ -221,7 +233,6 @@ class TwoPuzzle
 		@perfect.draw
 	end
 end
-
 
 class PuzzleWindow < Gosu::Window
 	def initialize
