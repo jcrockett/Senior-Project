@@ -2,11 +2,22 @@ require 'gosu'
 
 #This class represents just one tile.
 class Piece
-	def initialize(window, image, x, y)
+	attr_reader :x, :y, :image, :target_x, :target_y
+	def initialize(window, image, x, y, target_x, target_y)
 		@window = window
 		@image = image
 		@x = x
 		@y = y
+		@target_x = target_x
+		@target_y = target_y
+	end
+
+	def set_x(val)
+		@x = val
+	end
+
+	def set_y(val)
+		@y = val
 	end
 
 	#moves the piece left
@@ -51,32 +62,22 @@ class Piece
 	
 	#true if the piece is above the blank
 	def above?(blank)
-		@x == blank.get_x and @y == blank.get_y + 155
+		@x == blank.x and @y == blank.y + 155
 	end
 
 	#true if the piece is below the blank
 	def below?(blank)
-		@x == blank.get_x and @y == blank.get_y - 155
+		@x == blank.x and @y == blank.y - 155
 	end
 
 	#true if the piece is to the left of the blank
 	def left_of?(blank)
-		@x == blank.get_x - 155 and @y == blank.get_y
+		@x == blank.x - 155 and @y == blank.y
 	end
 
 	#true if the piece is to the right of the blank
 	def right_of?(blank)
-		@x == blank.get_x + 155 and @y == blank.get_y
-	end
-
-	#returns the piece's x value
-	def get_x
-		@x
-	end
-
-	#returns the piece's y value
-	def get_y
-		@y
+		@x == blank.x + 155 and @y == blank.y
 	end
 	
 	#true if the piece is currently being clicked (if the mouse button is down within its coordinates)
@@ -92,10 +93,10 @@ class Piece
 	end
 end
 
-#this class represents one full 15-puzzle
+#represents one full 15-puzzle
 class Puzzle
 	#the puzzle (coordinates of all pieces) and the solution (coordinates of where they should be) need to be accessible outside of this class
-	attr_reader :puzzle, :solution
+	attr_reader :puzzle, :solve_steps, :solved, :solution
 	def initialize(window, image, location)
 		@window = window
 		@image = image
@@ -104,10 +105,10 @@ class Puzzle
 		#if those values are positive, they represent the number of pixels for each tile
 		#if those values are negative, they represent the number of tiles (4 across, 4 down)
 		@tiles = Gosu::Image.load_tiles(@window, @image, -4, -4, true)
-		#this is where the puzzle starts
+		#where the puzzle starts
 		@location = location
 		@positions = []
-		#here we make an array of positions for the tiles
+		#make an array of positions for the tiles
 		for i in 0..3
 			for j in 0..3
 				@positions << [(@location + (j * 155)), (25 + (i * 155))]
@@ -115,10 +116,14 @@ class Puzzle
 		end
 		@puzzle = []
 		@solution = []
-		#here we make one piece for each tile/coordinate pair
+		@solve_steps = []
+		#make one piece for each tile/coordinate pair
 		for i in 0..15
-			@puzzle << Piece.new(self, @tiles[i], @positions[i][0], @positions[i][1])
+			@puzzle << Piece.new(self, @tiles[i], @positions[i][0], @positions[i][1], @positions[i][0], @positions[i][1])
+			@solution << Piece.new(self, @tiles[i], @positions[i][0], @positions[i][1], @positions[i][0], @positions[i][1])
 		end
+		#all initial calls of the puzzle are true
+		@solved = true
 	end
 
 	#this finds all the moves that can be made based on the position of the blank, and selects a random one
@@ -136,10 +141,12 @@ class Puzzle
 		#we find the piece with the correct index, and we move it
 		@puzzle[move[1]].move(move[0], @puzzle[3])
 		#finally, we add the move to the solution
-		@solution << move
+		@solve_steps << move
+		#not necessarily true (we can move them into solved position), but for our purposes, it doesn't matter
+		@solved = false
 	end
 
-	#takes in the id of a piece and returns the direction in which it can move into the blank (or "no" if it can't)
+	#takes in the ID of a piece and returns the direction in which it can move into the blank (or "no" if it can't)
 	def find_direction(id)
 		if @puzzle[id].right_of?(@puzzle[3])
 			"l"
@@ -185,19 +192,27 @@ class Puzzle
 				if find_direction(i) == "l"
 					@puzzle[i].left
 					@puzzle[3].right
-					solution << ["l", i]
+					solve_steps << ["l", i]
+					#not necessarily true (we can move them into solved position), but for our purposes, it doesn't matter
+					puzzle_status(false)
 				elsif find_direction(i) == "r"
 					@puzzle[i].right
 					@puzzle[3].left
-					solution << ["r", i]
+					solve_steps << ["r", i]
+					#not necessarily true (we can move them into solved position), but for our purposes, it doesn't matter
+					puzzle_status(false)
 				elsif find_direction(i) == "d"
 					@puzzle[i].down
 					@puzzle[3].up
-					solution << ["d", i]
+					solve_steps << ["d", i]
+					#not necessarily true (we can move them into solved position), but for our purposes, it doesn't matter
+					puzzle_status(false)
 				elsif find_direction(i) == "u"
 					@puzzle[i].up
 					@puzzle[3].down
-					solution << ["u", i]
+					solve_steps << ["u", i]
+					#not necessarily true (we can move them into solved position), but for our purposes, it doesn't matter
+					puzzle_status(false)
 				else
 					#or do nothing if it can't be moved
 				end
@@ -205,9 +220,29 @@ class Puzzle
 		end
 	end
 
-	#returns the blank tile
-	def get_blank
-		@puzzle[3]
+	def puzzle_status(status)
+		@solved = status
+	end
+
+	def is_goal?
+		for i in 0..15
+			if(@puzzle[i].x != @puzzle[i].target_x or @puzzle[i].y != @puzzle[i].target_y)
+				return false
+			end
+		end
+		return true
+	end
+		
+	#putting all pieces back in order
+	def quick_solve
+		for i in 0..15 #puzzle
+			for j in 0..15 #solution
+				if @puzzle[i].image == @solution[j].image
+					@puzzle[i].set_x(@solution[j].x)
+					@puzzle[i].set_y(@solution[j].y)
+				end
+			end
+		end	
 	end
 
 	#draws the entire puzzle
@@ -220,59 +255,138 @@ class Puzzle
 	end
 end
 
-#this class represents two puzzles put together, the normal one and the perfect one
+#represents two puzzles put together, the normal one and the perfect one
 class TwoPuzzle
+	attr_reader :perfect, :normal
 	def initialize(window, normal, perfect)
 		@window = window
 		@normal = normal
 		@perfect = perfect
 	end
 
-	#this scrambles the normal puzzle by doing random_move (from the Puzzle class) 100 times
+	#scrambles the normal puzzle by doing random_move (from the Puzzle class) 100 times
 	def scramble
 		for i in 0..100
 			@normal.random_move
 		end
 		#if the blank isn't in the correct position, we scramble again
-		if(@normal.get_blank.get_x != 15 or @normal.get_blank.get_y != 25)
+		if(@normal.puzzle[3].x != 15 or @normal.puzzle[3].y != 25)
 			scramble
+		end
+		@perfect.puzzle_status(false)
+		if !@perfect.solved
+			@perfect.quick_solve
 		end
 	end
 
-	#this just uses the move_tiles method (from the Puzzle class) on the normal puzzle	
+	#uses the move_tiles method (from the Puzzle class) on the normal puzzle	
 	def move_tiles
 		@normal.move_tiles
+		puts @perfect.solved
+		#if !@perfect.solved 
+		#	@perfect.quick_solve
+		#end
 	end
 
-	#this solves the normal puzzle and scrambles the perfect one
+	#solves the normal puzzle and scrambles the perfect one
 	def solve
-		perfect_positions = []
-		#here we find the perfect tile that would be moving if we moved each normal tile
-		#for each tile in the scrambled normal puzzle, the corresponding perfect tile is the one currently at the same height and on the opposite end of the row
-		#the loop adds them in an order based on the index number of the normal piece
-		for i in 0..15
-			for j in 0..15
-				if((@normal.puzzle[i].get_x - 15) == (1115 - @perfect.puzzle[j].get_x) and @normal.puzzle[i].get_y == @perfect.puzzle[j].get_y)
-					perfect_positions << j
+		#if the blank isn't in the upper left corner, then it can't solve
+		if @normal.puzzle[3].x == 15 && @normal.puzzle[3].y == 25
+			perfect_positions = []
+			#finds the perfect tile that would be moving if we moved each normal tile
+			#for each tile in the scrambled normal puzzle, the corresponding perfect tile is the one currently at the same height and on the opposite end of the row
+			#the loop adds them in an order based on the index number of the normal piece
+			for i in 0..15
+				for j in 0..15
+					if((@normal.puzzle[i].x - 15) == (1115 - @perfect.puzzle[j].x) and @normal.puzzle[i].y == @perfect.puzzle[j].y)
+						perfect_positions << j
+					end
+				end
+			end
+			#runs until there are no more moves to undo
+			while @normal.solve_steps.length > 0
+				#we simultaneously delete a move from the solution and store it in "move"
+				move = @normal.solve_steps.pop()
+				#just checking things
+				puts @normal.solve_steps.last.inspect
+				#we undo the move on the normal puzzle
+				@normal.solve_step(move[0], move[1])
+				#if the move was left or right, it's the opposite for the perfect puzzle, but if it's up or down then its the same
+				if(move[0] == "r")
+					@perfect.solve_step("l", perfect_positions[move[1]])
+				elsif(move[0] == "l")
+					@perfect.solve_step("r", perfect_positions[move[1]])
+				else
+					@perfect.solve_step(move[0], perfect_positions[move[1]])
 				end
 			end
 		end
-		#this loop runs until there are no more moves to undo
-		while @normal.solution.length > 0
-			#we simultaneously delete a move from the solution and store it in "move"
-			move = @normal.solution.pop()
-			#just some stuff we did to check some stuff
-			puts @normal.solution.last.inspect
-			#we undo the move on the normal puzzle
-			@normal.solve_step(move[0], move[1])
-			#if the move was left or right, its the opposite for the perfect puzzle, but if its up or down then its the same
-			if(move[0] == "r")
-				@perfect.solve_step("l", perfect_positions[move[1]])
-			elsif(move[0] == "l")
-				@perfect.solve_step("r", perfect_positions[move[1]])
-			else
-				@perfect.solve_step(move[0], perfect_positions[move[1]])
+	end
+
+	def toggle
+		if(@normal.is_goal? and !@perfect.is_goal?)
+			normal_positions = []
+			for i in 0..15
+				for j in 0..15
+					if((@perfect.puzzle[i].x - 15) == (1115 - @normal.puzzle[j].x) and @perfect.puzzle[i].y == @normal.puzzle[j].y)
+						normal_positions << j
+					end
+				end
 			end
+			@perfect.quick_solve
+			for i in 0..15
+				if((@normal.puzzle[i].target_x - 15) == (@perfect.puzzle[normal_positions[i]].target_x - 650) and @normal.puzzle[i].target_y == @perfect.puzzle[normal_positions[i]].target_y)
+					@normal.puzzle[i].set_x(15 + (1115 - (@perfect.puzzle[normal_positions[i]].x + 155)))
+					@normal.puzzle[i].set_y(@perfect.puzzle[normal_positions[i]].y)
+				end
+			end
+		elsif(@perfect.is_goal? and !@normal.is_goal?)
+			puts "perfect is solved"
+			@normal.quick_solve
+			for i in 0..15
+				for j in 0..15
+					if((@perfect.puzzle[i].target_x - 650) == (@normal.puzzle[j].target_x - 15) and @perfect.puzzle[i].target_y == @normal.puzzle[i].target_y)
+						@perfect.puzzle[i].set_x(1115 - (115 + (@normal.puzzle[j].x - 15)))
+						@perfect.puzzle[i].set_y(@normal.puzzle[j].y)
+					end
+				end
+			end
+		end
+		puts "toggle successful"
+	end
+
+	#saves the arrangement of puzzle pieces
+	def save
+		normal = []
+		perfect = []
+		#gets the arrangement of the normal side
+		puts @normal.puzzle.inspect
+		puts @perfect.puzzle.inspect
+		for i in 0..15 #puzzle
+			for j in 0..15 #solution
+				if @normal.puzzle[i].image == @normal.solution[j].image
+					normal << [@normal.puzzle[i].x, @normal.puzzle[i].y]
+				end
+			end
+		end
+		#gets the arrangement of the perfect side
+		for i in 0..15 #puzzle
+			for j in 0..15 #solution
+				if @perfect.puzzle[i].image == @perfect.solution[j].image
+					perfect << [@perfect.puzzle[i].x, @perfect.puzzle[i].y]
+				end
+			end
+		end
+		#creates a file with the saved coordinates
+		File.open("savepuzzle.txt", "a") do |file|
+			for i in 0..(normal.length-1)
+				normal[i] = normal[i].join(",")
+			end
+			for i in 0..(perfect.length-1)
+				perfect[i] = perfect[i].join(",")
+			end
+			save_string = normal.join(";") + ":" + perfect.join(";")
+			file.puts save_string
 		end
 	end
 
@@ -290,43 +404,62 @@ class PuzzleWindow < Gosu::Window
 		@background = Gosu::Image.new(self, "background.jpg", true)
 		@scramble_button = Gosu::Image.new(self, "buttons/scramble.tiff", true)
 		@solve_button = Gosu::Image.new(self, "buttons/solve.tiff", true)
+		@save_button = Gosu::Image.new(self, "buttons/save.tiff", true)
+		@toggle_button = Gosu::Image.new(self, "buttons/toggle.tiff", true)
 		@normal = Puzzle.new(self, "perfect face/smaller_perfect.jpg", 15)
 		@perfect = Puzzle.new(self, "normal face/normal.jpg", 650)
 		@puzzle = TwoPuzzle.new(self, @normal, @perfect)
 	end
 
-	#this lets us see and use the cursor inside the window
+	#lets us see and use the cursor inside the window
 	def needs_cursor?
     	true
 	end
 
-	#this checks if the "scramble" button is being clicked and scrambles the puzzle if it is
+	#checks if the "scramble" button is being clicked and scrambles the puzzle if it is
 	def scramble
-		if button_down? Gosu::MsLeft and mouse_x > 110 and mouse_x < 265 and mouse_y > 645 and mouse_y < 695
+		if button_down? Gosu::MsLeft and mouse_x > 220 and mouse_x < 457 and mouse_y > 640 and mouse_y < 695
 			@puzzle.scramble
 		end
 	end
 
-	#this checks if the "solve" button is being clicked and solves the puzzle if it is
+	#checks if the "solve" button is being clicked and solves the puzzle if it is
 	def solve
-		if button_down? Gosu::MsLeft and mouse_x > 360 and mouse_x < 515 and mouse_y > 645 and mouse_y < 695
+		if button_down? Gosu::MsLeft and mouse_x > 470 and mouse_x < 707 and mouse_y > 640 and mouse_y < 695
 			@puzzle.solve
 		end
 	end
 
-	#this is the update function (built into gosu) that does all of these things over and over
+	#checks if the "save" button is being clicked and saves the puzzle if it is
+	def save
+		if button_down? Gosu::MsLeft and mouse_x > 720 and mouse_x < 957 and mouse_y > 640 and mouse_y < 695
+			@puzzle.save
+		end
+	end
+
+	def toggle
+		if button_down? Gosu::MsLeft and mouse_x > 870 and mouse_x < 957 and mouse_y > 640 and mouse_y < 695
+			@puzzle.toggle
+		end
+	end
+
+	#the update function (built into gosu) that does all of these things over and over
 	def update
 		scramble
 		solve
+		save
+		toggle
 		@puzzle.move_tiles
 	end
 
-	#this draws everything
+	#draws everything
 	def draw
 		@background.draw(0, 0, 0)
 		@puzzle.draw
-		@scramble_button.draw(100, 645, 0)
-		@solve_button.draw(350, 645, 0)
+		@scramble_button.draw(220, 640, 0)
+		@solve_button.draw(470, 640, 0)
+		@save_button.draw(720, 640, 0)
+		@toggle_button.draw(870, 640, 0)
 	end
 end
 
