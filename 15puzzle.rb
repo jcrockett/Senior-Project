@@ -211,17 +211,19 @@ class Puzzle
 
 	def possible_moves
 		moves = []
-		if @blank.x < 3
-			moves << 'l'
-		end
-		if @blank.y < 3
-			moves << 'd'
-		end
-		if @blank.x > 0
-			moves << 'r'
-		end
-		if @blank.y > 0
-			moves << 'u'
+		for i in 0..15
+			if @puzzle[i].right_of?(@blank)
+				moves << ['l', i]
+			end
+			if @puzzle[i].left_of?(@blank)
+				moves << ['r', i]
+			end
+			if @puzzle[i].above?(@blank)
+				moves << ['d', i]
+			end
+			if @puzzle[i].below?(@blank)
+				moves << ['u', i]
+			end
 		end
 		return moves
 	end
@@ -273,6 +275,55 @@ class TwoPuzzle
 			while @normal.solve_steps.length > 0
 				puts @normal.solve_steps.last.inspect
 				move = @normal.solve_steps.pop()
+				@normal.solve_step(move[0], move[1])
+				if(move[0] == "r")
+					@perfect.solve_step("l", perfect_positions[move[1]])
+				elsif(move[0] == "l")
+					@perfect.solve_step("r", perfect_positions[move[1]])
+				else
+					@perfect.solve_step(move[0], perfect_positions[move[1]])
+				end
+			end
+		end
+	end
+
+	def better_solve_helper(puzzles)
+		fringe = []
+		puzzles.each do |ps|
+			pm = ps.possible_moves
+			temp_fringe = []
+			for i in 0..(pm.length-1)
+				p = ps
+				p.solve_step(pm[i][0], pm[i][1])
+				p.add_move(pm[i])
+				temp_fringe << p
+			end
+			temp_fringe.each do |f|
+				if(f.is_goal?)
+					return f.moves
+				else
+					fringe << f
+				end
+			end
+		end
+		better_solve_helper(fringe)
+	end
+
+	def better_solve
+		if @normal.puzzle[3].x == 0 && @normal.puzzle[3].y == 0	
+		solution = better_solve_helper([@normal])
+			perfect_positions = []
+			for i in 0..15
+				for j in 0..15
+					if(@normal.puzzle[i].x == (3 - @perfect.puzzle[j].x) and @normal.puzzle[i].y == @perfect.puzzle[j].y)
+						perfect_positions << j
+					end
+				end
+			end
+			puts perfect_positions.inspect
+			while solution.length > 0
+				puts solution.last.inspect
+				move = solution.pop()
 				@normal.solve_step(move[0], move[1])
 				if(move[0] == "r")
 					@perfect.solve_step("l", perfect_positions[move[1]])
@@ -339,7 +390,7 @@ class PuzzleWindow < Gosu::Window
 
 	def solve
 		if button_down? Gosu::MsLeft and mouse_x > 552 and mouse_x < 707 and mouse_y > 645 and mouse_y < 695
-			@puzzle.solve
+			@puzzle.better_solve
 		end
 	end
 
