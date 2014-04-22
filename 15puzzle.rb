@@ -293,7 +293,7 @@ class TwoPuzzle
 			pm = ps.possible_moves
 			temp_fringe = []
 			for i in 0..(pm.length-1)
-				p = ps
+				p = ps.dup
 				p.solve_step(pm[i][0], pm[i][1])
 				p.add_move(pm[i])
 				temp_fringe << p
