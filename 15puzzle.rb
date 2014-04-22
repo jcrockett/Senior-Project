@@ -141,7 +141,23 @@ class Puzzle
 		end
 	end
 
-	def solve_step(dir, i)
+	def solve_forward(dir, i)
+		if(dir == "r")
+			@puzzle[i].right
+			@puzzle[3].left
+		elsif(dir == "l")
+			@puzzle[i].left
+			@puzzle[3].right
+		elsif(dir == "d")
+			@puzzle[i].down
+			@puzzle[3].up
+		elsif(dir == "u")
+			@puzzle[i].up
+			@puzzle[3].down
+		end
+	end
+
+	def solve_backward(dir, i)
 		if(dir == "r")
 			@puzzle[i].left
 			@puzzle[3].right
@@ -219,10 +235,10 @@ class Puzzle
 				moves << ['r', i]
 			end
 			if @puzzle[i].above?(@blank)
-				moves << ['d', i]
+				moves << ['u', i]
 			end
 			if @puzzle[i].below?(@blank)
-				moves << ['u', i]
+				moves << ['d', i]
 			end
 		end
 		return moves
@@ -259,6 +275,7 @@ class TwoPuzzle
 
 	def move_tiles
 		@normal.move_tiles
+		# puts @normal.possible_moves.inspect
 	end
 
 	def solve
@@ -275,43 +292,55 @@ class TwoPuzzle
 			while @normal.solve_steps.length > 0
 				puts @normal.solve_steps.last.inspect
 				move = @normal.solve_steps.pop()
-				@normal.solve_step(move[0], move[1])
+				@normal.solve_forward(move[0], move[1])
 				if(move[0] == "r")
-					@perfect.solve_step("l", perfect_positions[move[1]])
+					@perfect.solve_forward("l", perfect_positions[move[1]])
 				elsif(move[0] == "l")
-					@perfect.solve_step("r", perfect_positions[move[1]])
+					@perfect.solve_forward("r", perfect_positions[move[1]])
 				else
-					@perfect.solve_step(move[0], perfect_positions[move[1]])
+					@perfect.solve_forward(move[0], perfect_positions[move[1]])
 				end
 			end
 		end
 	end
 
 	def better_solve_helper(puzzles)
+		# puzzles.delete_if {|f| p == nil or p == [] }
 		fringe = []
+		solution = Puzzle.new(@window, @normal.location, @normal.image, @normal.num, @normal.moves)
+		solution.solve_forward("u", 4)
 		puzzles.each do |ps|
 			pm = ps.possible_moves
+			puts "pm = " + pm.inspect
 			temp_fringe = []
 			for i in 0..(pm.length-1)
 				p = ps.clone
-				p.solve_step(pm[i][0], pm[i][1])
+				p.solve_forward(pm[i][0], pm[i][1])
 				p.add_move(pm[i])
+				# puts "p = " + p.inspect + "\n"
 				temp_fringe << p
 			end
+			puts "temp_fringe length: " + temp_fringe.length.to_s
 			temp_fringe.each do |f|
 				if(f.is_goal?)
-					return f.moves
+					solution = f
 				else
 					fringe << f
 				end
 			end
 		end
-		better_solve_helper(fringe)
+		if(solution.is_goal?)
+			puts "goal found!"
+			return solution.moves
+		else
+			puts "goal not found :("
+			better_solve_helper(fringe)
+		end
 	end
 
 	def better_solve
 		if @normal.puzzle[3].x == 0 && @normal.puzzle[3].y == 0	
-		solution = better_solve_helper([@normal])
+		solution = better_solve_helper([@normal]).reverse
 			perfect_positions = []
 			for i in 0..15
 				for j in 0..15
@@ -324,13 +353,15 @@ class TwoPuzzle
 			while solution.length > 0
 				puts solution.last.inspect
 				move = solution.pop()
-				@normal.solve_step(move[0], move[1])
+				@normal.solve_forward(move[0], move[1])
 				if(move[0] == "r")
-					@perfect.solve_step("l", perfect_positions[move[1]])
+					@perfect.solve_forward("l", perfect_positions[move[1]])
+					puts "moved perfect " + move[1].to_s + "l"
 				elsif(move[0] == "l")
-					@perfect.solve_step("r", perfect_positions[move[1]])
+					@perfect.solve_forward("r", perfect_positions[move[1]])
+					puts "moved perfect " + move[1].to_s + "r"
 				else
-					@perfect.solve_step(move[0], perfect_positions[move[1]])
+					@perfect.solve_forward(move[0], perfect_positions[move[1]])
 				end
 			end
 		end
