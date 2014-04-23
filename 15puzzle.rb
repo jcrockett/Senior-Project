@@ -36,11 +36,11 @@ class Piece
 	end
 
 	def down
-		@y -= 1
+		@y += 1
 	end
 
 	def up
-		@y += 1
+		@y -= 1
 	end
 
 	def move(dir, blank)
@@ -62,11 +62,11 @@ class Piece
 	end
 	
 	def above?(blank)
-		@x == blank.x and @y == blank.y + 1
+		@x == blank.x and @y == blank.y - 1
 	end
 
 	def below?(blank)
-		@x == blank.x and @y == blank.y - 1
+		@x == blank.x and @y == blank.y + 1
 	end
 
 	def left_of?(blank)
@@ -86,8 +86,8 @@ class Piece
 end
 
 class Puzzle
-	attr_reader :puzzle, :solve_steps, :solution, :location, :image, :num, :moves
-	def initialize(window, location, image, num, moves)
+	attr_reader :puzzle, :solve_steps, :solution, :location, :image, :num, :moves, :blank
+	def initialize(window, location, image, num, moves, pieces)
 		@window = window
 		@location = location
 		@image = image
@@ -97,13 +97,17 @@ class Puzzle
 		@tiles = Gosu::Image.load_tiles(@window, @image, -num, -num, true)
 		x, y = 0, 0
 		@puzzle = []
-		@tiles.each do |tile|
-			p = Piece.new(@window, tile, x, y, x, y)
-			@puzzle << p
-			x += 1
-			if x == num
-				x = 0
-				y += 1
+		if(!pieces.empty?)
+			@puzzle = pieces
+		else
+			@tiles.each do |tile|
+				p = Piece.new(@window, tile, x, y, x, y)
+				@puzzle << p
+				x += 1
+				if x == num
+					x = 0
+					y += 1
+				end
 			end
 		end
 		@blank = @puzzle[3]
@@ -121,6 +125,7 @@ class Puzzle
 				moves << [direction, i]
 			end
 		end
+		puts moves.length.inspect
 		move = moves.shuffle[0]
 		@puzzle[move[1]].move(move[0], @puzzle[3])
 		@solve_steps << move
@@ -207,13 +212,9 @@ class Puzzle
 
 	def quick_solve
 		for i in 0..15
-			for j in 0..15
-				if @puzzle[i].image == @solution[j].image
-					@puzzle[i].set_x(@solution[j].x)
-					@puzzle[i].set_y(@solution[j].y)
-				end
-			end
-		end	
+			@puzzle[i].set_x(@puzzle[i].target_x)
+			@puzzle[i].set_y(@puzzle[i].target_y)
+		end
 	end
 
 	def is_goal?
@@ -235,13 +236,17 @@ class Puzzle
 				moves << ['r', i]
 			end
 			if @puzzle[i].above?(@blank)
-				moves << ['u', i]
+				moves << ['d', i]
 			end
 			if @puzzle[i].below?(@blank)
-				moves << ['d', i]
+				moves << ['u', i]
 			end
 		end
 		return moves
+	end
+	
+	def set_puzzle(state)
+		@puzzle = state
 	end
 
 	def draw
@@ -259,6 +264,8 @@ class TwoPuzzle
 		@window = window
 		@normal = normal
 		@perfect = perfect
+		@normal_scramble = []
+		@perfect_scramble = []
 	end
 
 	def scramble
@@ -280,6 +287,9 @@ class TwoPuzzle
 
 	def solve
 		if @normal.puzzle[3].x == 0 && @normal.puzzle[3].y == 0
+			@normal.puzzle.each do |n|
+				@normal_scramble << [n.x, n.y]
+			end
 			perfect_positions = []
 			for i in 0..15
 				for j in 0..15
@@ -292,32 +302,41 @@ class TwoPuzzle
 			while @normal.solve_steps.length > 0
 				puts @normal.solve_steps.last.inspect
 				move = @normal.solve_steps.pop()
-				@normal.solve_forward(move[0], move[1])
+				@normal.solve_backward(move[0], move[1])
 				if(move[0] == "r")
-					@perfect.solve_forward("l", perfect_positions[move[1]])
+					@perfect.solve_backward("l", perfect_positions[move[1]])
 				elsif(move[0] == "l")
-					@perfect.solve_forward("r", perfect_positions[move[1]])
+					@perfect.solve_backward("r", perfect_positions[move[1]])
 				else
-					@perfect.solve_forward(move[0], perfect_positions[move[1]])
+					@perfect.solve_backward(move[0], perfect_positions[move[1]])
 				end
 			end
 		end
 	end
 
-	def better_solve_helper(puzzles)
-		# puzzles.delete_if {|f| p == nil or p == [] }
+	def better_solve_helper(puzzles, level)
+		puts "level " + level.inspect
 		fringe = []
-		solution = Puzzle.new(@window, @normal.location, @normal.image, @normal.num, @normal.moves)
+		solution = Puzzle.new(@window, @normal.location, @normal.image, @normal.num, @normal.moves, [])
 		solution.solve_forward("u", 4)
 		puzzles.each do |ps|
 			pm = ps.possible_moves
-			puts "pm = " + pm.inspect
+			puts "pm length = " + pm.length.inspect
 			temp_fringe = []
-			for i in 0..(pm.length-1)
-				p = ps.clone
-				p.solve_forward(pm[i][0], pm[i][1])
-				p.add_move(pm[i])
-				# puts "p = " + p.inspect + "\n"
+			pm.each do |move|
+				new_moves = ps.moves + [move]
+				new_puzzle = []
+				ps.puzzle.each do |piece|
+					new_puzzle << piece
+				end
+				p = Puzzle.new(@window, ps.location, ps.image, ps.num, new_moves, new_puzzle)
+				p.solve_forward(move[0], move[1])
+				pieces = []
+				p.puzzle.each do |z|
+					pieces << [z.x, z.y]
+				end
+				puts pieces.inspect
+				puts "ps = " + ps.puzzle.inspect
 				temp_fringe << p
 			end
 			puts "temp_fringe length: " + temp_fringe.length.to_s
@@ -334,13 +353,13 @@ class TwoPuzzle
 			return solution.moves
 		else
 			puts "goal not found :("
-			better_solve_helper(fringe)
+			better_solve_helper(fringe, level+1)
 		end
 	end
 
 	def better_solve
 		if @normal.puzzle[3].x == 0 && @normal.puzzle[3].y == 0	
-		solution = better_solve_helper([@normal]).reverse
+		solution = better_solve_helper([@normal], 0).reverse
 			perfect_positions = []
 			for i in 0..15
 				for j in 0..15
@@ -390,6 +409,32 @@ class TwoPuzzle
 		end
 	end
 
+	def toggle
+		normal = @normal.puzzle
+		perfect = @perfect.puzzle
+		if(@normal.is_goal? and !@perfect.is_goal?)
+			@perfect.puzzle.each do |p|
+				@perfect_scramble << [p.x, p.y]
+			end
+			@perfect.quick_solve
+			puts @normal_scramble.inspect
+			for i in 0..15
+				@normal.puzzle[i].set_x(@normal_scramble[i][0])
+				@normal.puzzle[i].set_y(@normal_scramble[i][1])
+			end
+		elsif(@perfect.is_goal? and !@normal.is_goal?)
+			@normal.puzzle.each do |n|
+				@normal_scramble << [n.x, n.y]
+			end
+			@normal.quick_solve
+			puts @perfect_scramble.inspect
+			for i in 0..15
+				@perfect.puzzle[i].set_x(@perfect_scramble[i][0])
+				@perfect.puzzle[i].set_y(@perfect_scramble[i][1])
+			end
+		end
+	end
+
 	def draw
 		@normal.draw
 		@perfect.draw
@@ -404,8 +449,9 @@ class PuzzleWindow < Gosu::Window
 		@scramble_button = Gosu::Image.new(self, "buttons/scramble.tiff", true)
 		@solve_button = Gosu::Image.new(self, "buttons/solve.tiff", true)
 		@save_button = Gosu::Image.new(self, "buttons/save.tiff", true)
-		@normal = Puzzle.new(self, 15, "perfect face/smaller_perfect.jpg", 4, [])
-		@perfect = Puzzle.new(self, 650, "normal face/normal.jpg", 4, [])
+		@toggle_button = Gosu::Image.new(self, "buttons/toggle.tiff", true)
+		@normal = Puzzle.new(self, 15, "perfect face/smaller_perfect.jpg", 4, [], [])
+		@perfect = Puzzle.new(self, 650, "normal face/normal.jpg", 4, [], [])
 		@puzzle = TwoPuzzle.new(self, @normal, @perfect)
 	end
 
@@ -421,7 +467,7 @@ class PuzzleWindow < Gosu::Window
 
 	def solve
 		if button_down? Gosu::MsLeft and mouse_x > 552 and mouse_x < 707 and mouse_y > 645 and mouse_y < 695
-			@puzzle.better_solve
+			@puzzle.solve
 		end
 	end
 
@@ -431,10 +477,17 @@ class PuzzleWindow < Gosu::Window
 		end
 	end
 
+	def toggle
+		if button_down? Gosu::MsLeft and mouse_x > 957 and mouse_x < 1100 and mouse_y > 645 and mouse_y < 695
+			@puzzle.toggle
+		end
+	end
+
 	def update
 		scramble
 		solve
 		save
+		toggle
 		@puzzle.move_tiles
 	end
 
@@ -444,6 +497,7 @@ class PuzzleWindow < Gosu::Window
 		@scramble_button.draw(302, 645, 0)
 		@solve_button.draw(552, 645, 0)
 		@save_button.draw(802, 645, 0)
+		@toggle_button.draw(957, 645, 0)
 	end
 end
 
